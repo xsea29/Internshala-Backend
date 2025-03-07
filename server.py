@@ -4,7 +4,6 @@ from flask_login import UserMixin, login_user, LoginManager, login_required, log
 from flask_wtf import FlaskForm
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
-# from flask_session import Session
 import pandas as pd
 import subprocess
 import json
@@ -15,7 +14,6 @@ CORS(app, supports_credentials=True)
 bcrypt = Bcrypt(app)
 
 CSV_FILE_PATH = "successful_applications.csv"
-# EXCEL_FILE_PATH = "submitted_applications.xlsx"
 
 
 # Clear the CSV but keep the header when the app starts
@@ -143,40 +141,13 @@ def submit_application():
             new_df.to_csv(CSV_FILE_PATH, mode='a', header=False, index=False)
         else:
             new_df.to_csv(CSV_FILE_PATH, index=False)
-        
-        # Update the Excel file after adding new data
-        # update_excel()
-        
+                
         return jsonify({"message": "Application submitted successfully"}), 200
     except Exception as e:
         print("Error:", e)
         return jsonify({"error": "Failed to submit application"}), 500
-
-# Route to download the Excel file
-# @app.route("/download-excel", methods=["GET"])
-# def download_excel():
-#     # Check if the Excel file exists
-#     if os.path.exists(EXCEL_FILE_PATH):
-#         return send_file(EXCEL_FILE_PATH, as_attachment=True)
-#     else:
-#         return jsonify({"error": "No data available"}), 404
-
-
-# def update_excel():
-#     if os.path.exists(CSV_FILE_PATH):
-#         df = pd.read_csv(CSV_FILE_PATH)
-
-#         if len(df) > 1:
-#             header = df.columns.tolist()
-#             data = df.iloc[1:]
-
-#             data.reset_index(drop=True, inplace=True)
-
-#             data.to_excel(EXCEL_FILE_PATH, index=False, header=header)
-
-#         else:
-#             pd.DataFrame(columns=df.columns).to_excel(EXCEL_FILE_PATH, index=False)
-
     
 if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))
     app.run(debug=True)
+    app.run(host="0.0.0.0", port=port, debug=True)
