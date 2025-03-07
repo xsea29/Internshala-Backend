@@ -43,6 +43,7 @@ console.log("Parsed Data:", { profile, cover });
   const browser = await puppeteer.launch({
     headless: "new",
     defaultViewport: null,
+    executablePath: require("puppeteer").executablePath(),
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu"],
   });
 
