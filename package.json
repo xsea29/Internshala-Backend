@@ -4,7 +4,7 @@
   "description": "Backend service for automation with Flask and Puppeteer",
   "main": "server.py",
   "scripts": {
-    "start": "node puppeteer/apply-internships.js",
+    "start": "node puppeteer/apply_internships.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
