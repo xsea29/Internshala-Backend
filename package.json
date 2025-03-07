@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node puppeteer/apply_internships.js",
     "postinstall": "npx puppeteer browsers install chrome",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "install": "PUPPETEER_SKIP_DOWNLOAD=false npm install"
   },
   "author": "",
   "license": "ISC",
