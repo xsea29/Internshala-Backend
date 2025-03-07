@@ -99,6 +99,25 @@ def logout():
         return jsonify({"success": True, "message": "Logged out successfully!"}), 200
     return jsonify({"error": "Invalid request method"}), 405
 
+# @app.route('/api/apply-internships', methods=["POST"])
+# def apply_internships():
+#     try:
+#         data = request.get_json()
+#         if not data or 'profile' not in data or 'cover' not in data:
+#             return jsonify({"success": False, "message": "Profile and cover letter required"}), 400
+
+#         puppeteer_script = os.path.abspath(os.path.join(os.path.dirname(__file__), "puppeteer", "apply_internships.js"))
+
+#         process = subprocess.Popen(["node", puppeteer_script, json.dumps(data)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#         output, error = process.communicate()
+
+#         if process.returncode == 0:
+#             return jsonify({"success": True, "message": "Applications submitted!", "result": output.decode().strip()})
+#         else:
+#             return jsonify({"success": False, "message": "Failed to apply", "error": error.decode().strip()}), 500
+#     except Exception as e:
+#         return jsonify({"success": False, "message": str(e)}), 500
+
 @app.route('/api/apply-internships', methods=["POST"])
 def apply_internships():
     try:
@@ -111,12 +130,17 @@ def apply_internships():
         process = subprocess.Popen(["node", puppeteer_script, json.dumps(data)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, error = process.communicate()
 
+        print("Puppeteer Output:", output.decode().strip())  # ✅ Debug output
+        print("Puppeteer Error:", error.decode().strip())  # ✅ Debug errors
+
         if process.returncode == 0:
             return jsonify({"success": True, "message": "Applications submitted!", "result": output.decode().strip()})
         else:
             return jsonify({"success": False, "message": "Failed to apply", "error": error.decode().strip()}), 500
     except Exception as e:
+        print("Exception in Puppeteer:", str(e))  # ✅ Log exceptions
         return jsonify({"success": False, "message": str(e)}), 500
+
     
 @app.route('/api/submitted-applications', methods=["GET"])
 def get_submitted_applications():
