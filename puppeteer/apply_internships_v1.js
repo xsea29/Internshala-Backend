@@ -12,6 +12,8 @@ const { profile, cover } = data;
 (async () => {
   const browser = await puppeteer.launch({
     headless: false,
+    executablePath:
+      process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium-browser",
     defaultViewport: null,
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu"],
   });
