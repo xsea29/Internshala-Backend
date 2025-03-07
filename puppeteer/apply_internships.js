@@ -43,7 +43,8 @@ console.log("Parsed Data:", { profile, cover });
   const browser = await puppeteer.launch({
     headless: "new",
     executablePath:
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/google-chrome-stable",
+      process.env.PUPPETEER_EXECUTABLE_PATH ||
+      require("puppeteer").executablePath(),
     defaultViewport: null,
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu"],
   });
