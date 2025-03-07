@@ -6,8 +6,21 @@ const email = process.env.EMAIL;
 const password = process.env.PASSWORD;
 
 const args = process.argv[2];
-const data = JSON.parse(args);
-const { profile, cover } = data;
+if (!args) {
+  console.error("Error: No arguments provided");
+  process.exit(1); // Exit the script with an error code
+}
+
+try {
+  const data = JSON.parse(args);
+  const { profile, cover } = data;
+  console.log("Parsed Data:", data);
+} catch (error) {
+  console.error("Error parsing JSON:", error.message);
+  process.exit(1);
+}
+// const data = JSON.parse(args);
+// const { profile, cover } = data;
 
 (async () => {
   const browser = await puppeteer.launch({
