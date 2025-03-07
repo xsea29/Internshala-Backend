@@ -1,14 +1,14 @@
 {
   "name": "automation-backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Backend service for automation with Flask and Puppeteer",
+  "main": "server.py",
   "scripts": {
+    "start": "node apply-internships.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "dotenv": "^16.4.7",
     "puppeteer-extra": "^3.3.6",
