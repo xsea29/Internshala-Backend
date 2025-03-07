@@ -5,7 +5,6 @@ require("dotenv").config();
 const email = process.env.EMAIL;
 const password = process.env.PASSWORD;
 
-const jsonData = process.env.JSON_DATA;
 let profile, cover;
 
 if (process.argv[2]) {
@@ -17,20 +16,8 @@ if (process.argv[2]) {
     console.error("Error parsing JSON from arguments:", error.message);
     process.exit(1);
   }
-} else if (jsonData) {
-  try {
-    const data = JSON.parse(jsonData);
-    profile = data.profile;
-    cover = data.cover;
-  } catch (error) {
-    console.error(
-      "Error parsing JSON from environment variable:",
-      error.message
-    );
-    process.exit(1);
-  }
 } else {
-  console.error("Error: No JSON data provided");
+  console.error("Error: No profile and cover data provided");
   process.exit(1);
 }
 
