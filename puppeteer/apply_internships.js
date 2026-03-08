@@ -185,31 +185,46 @@ async function loadCookies(page) {
 }
 
 async function loginAndSaveCookies(page) {
-  await page.goto("http://www.internshala.com", { 
-    waitUntil: "networkidle2", 
-    timeout: 60000 // 60 seconds timeout
-  });
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  
-  await page.waitForSelector(".register-student-cta", { visible: true });
-  await page.click(".register-student-cta");
-  
-  await page.waitForSelector("#login-link-container", { visible: true });
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  await page.click('[data-target="#login-modal"]');
+  try {
+    console.log("Login credentials check - Email:", email ? "SET" : "MISSING", "Password:", password ? "SET" : "MISSING");
+    
+    await page.goto("http://www.internshala.com", { 
+      waitUntil: "networkidle2", 
+      timeout: 60000 // 60 seconds timeout
+    });
+    console.log("Loaded Internshala homepage");
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    
+    await page.waitForSelector(".register-student-cta", { visible: true, timeout: 30000 });
+    await page.click(".register-student-cta");
+    console.log("Clicked register button");
+    
+    await page.waitForSelector("#login-link-container", { visible: true, timeout: 30000 });
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await page.click('[data-target="#login-modal"]');
+    console.log("Opened login modal");
 
-  // Wait for modal to appear
-  await page.waitForSelector("#modal_email", { visible: true });
-  await new Promise((resolve) => setTimeout(resolve, 800));
-  
-  await page.type("#modal_email", email, { delay: 100 });
-  await page.type("#modal_password", password, { delay: 100 });
-  await page.keyboard.press("Enter");
-  await page.waitForNavigation({ waitUntil: "networkidle2" });
+    // Wait for modal to appear
+    await page.waitForSelector("#modal_email", { visible: true, timeout: 30000 });
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    
+    console.log("Typing credentials...");
+    await page.type("#modal_email", email, { delay: 100 });
+    await page.type("#modal_password", password, { delay: 100 });
+    await page.keyboard.press("Enter");
+    console.log("Submitted login form");
+    
+    await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 60000 });
+    console.log("Login successful");
 
-  const cookies = await page.cookies();
-  fs.writeFileSync(cookiesFile, JSON.stringify(cookies));
-  console.log("Cookies saved successfully!");
+    const cookies = await page.cookies();
+    fs.writeFileSync(cookiesFile, JSON.stringify(cookies));
+    console.log("Cookies saved successfully!");
+  } catch (error) {
+    console.error("Login error:", error.message);
+    updateProgress(10, `Login failed: ${error.message}`, 0, 0);
+    throw error;
+  }
 }
 
 async function navigateToInternships(page) {
