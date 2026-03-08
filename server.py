@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, session, send_file
+from flask import Flask, request, jsonify, session, send_file, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
@@ -8,12 +8,24 @@ import pandas as pd
 import subprocess
 import json
 import os
+import time
+import uuid
+from threading import Thread
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 bcrypt = Bcrypt(app)
 
-CSV_FILE_PATH = "successful_applications.csv"
+# Create data directories
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+SESSIONS_DIR = os.path.join(os.path.dirname(__file__), "sessions")
+AUTH_DIR = os.path.join(os.path.dirname(__file__), "auth")
+
+for directory in [DATA_DIR, SESSIONS_DIR, AUTH_DIR]:
+    os.makedirs(directory, exist_ok=True)
+
+CSV_FILE_PATH = os.path.join(DATA_DIR, "successful_applications.csv")
+RESULT_CSV_PATH = os.path.join(DATA_DIR, "result.csv")
 
 
 # Clear the CSV but keep the header when the app starts
@@ -26,6 +38,7 @@ def clear_csv_keep_header():
             header = lines[0]
             with open(CSV_FILE_PATH, 'w') as file:
                 file.write(header)  
+
 clear_csv_keep_header()
 
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -125,31 +138,107 @@ def apply_internships():
         if not data or 'profile' not in data or 'cover' not in data:
             return jsonify({"success": False, "message": "Profile and cover letter required"}), 400
 
-        puppeteer_script = os.path.abspath(os.path.join(os.path.dirname(__file__), "puppeteer", "apply_internships.js"))
-
-        process = subprocess.Popen(["node", puppeteer_script, json.dumps(data)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, error = process.communicate()
-
-        print("Puppeteer Output:", output.decode().strip())  # ✅ Debug output
-        print("Puppeteer Error:", error.decode().strip())  # ✅ Debug errors
-
-        if process.returncode == 0:
-            return jsonify({"success": True, "message": "Applications submitted!", "result": output.decode().strip()})
-        else:
-            return jsonify({"success": False, "message": "Failed to apply", "error": error.decode().strip()}), 500
+        # Generate unique session ID
+        session_id = str(uuid.uuid4())
+        
+        # Run automation in background thread
+        def run_automation():
+            puppeteer_script = os.path.abspath(os.path.join(os.path.dirname(__file__), "puppeteer", "apply_internships.js"))
+            process = subprocess.Popen(
+                ["node", puppeteer_script, json.dumps(data), session_id],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            output, error = process.communicate()
+            print("Puppeteer Output:", output.decode().strip())
+            print("Puppeteer Error:", error.decode().strip())
+        
+        thread = Thread(target=run_automation)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({"success": True, "session_id": session_id})
     except Exception as e:
-        print("Exception in Puppeteer:", str(e))  # ✅ Log exceptions
+        print("Exception in Puppeteer:", str(e))
         return jsonify({"success": False, "message": str(e)}), 500
 
+@app.route('/api/apply-internships-stream', methods=["GET"])
+def apply_internships_stream():
+    """SSE endpoint for real-time progress tracking"""
+    session_id = request.args.get('session')
+    
+    if not session_id:
+        return jsonify({"error": "Session ID required"}), 400
+    
+    def generate():
+        progress_file = os.path.join(SESSIONS_DIR, f"progress_{session_id}.json")
+        last_data = None
+        
+        try:
+            # Wait for file to be created and stream progress
+            while True:
+                if os.path.exists(progress_file):
+                    try:
+                        with open(progress_file, 'r') as f:
+                            progress_data = json.load(f)
+                            
+                            # Only send if data changed
+                            if progress_data != last_data:
+                                yield f"data: {json.dumps(progress_data)}\n\n"
+                                last_data = progress_data.copy()
+                            
+                            # Check if complete or stopped
+                            if progress_data.get('complete') or progress_data.get('stop'):
+                                # Cleanup file
+                                try:
+                                    os.remove(progress_file)
+                                except:
+                                    pass
+                                break
+                    except (json.JSONDecodeError, IOError):
+                        pass  # Ignore incomplete JSON writes or file read errors
+                
+                time.sleep(0.5)  # Poll every 500ms
+        except Exception as e:
+            yield f"data: {{\"error\": \"{str(e)}\"}}\n\n"
+    
+    return Response(generate(), mimetype='text/event-stream')
+
+
+@app.route('/api/stop-automation', methods=["POST"])
+def stop_automation():
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id')
+        
+        if not session_id:
+            return jsonify({"success": False, "message": "Session ID required"}), 400
+        
+        progress_file = os.path.join(SESSIONS_DIR, f"progress_{session_id}.json")
+        
+        if not os.path.exists(progress_file):
+            return jsonify({"success": False, "message": "Session not found"}), 404
+        
+        # Read file, set stop: true, write back
+        with open(progress_file, 'r') as f:
+            progress_data = json.load(f)
+        
+        progress_data['stop'] = True
+        progress_data['status'] = 'Stopped by user'
+        
+        with open(progress_file, 'w') as f:
+            json.dump(progress_data, f)
+        
+        return jsonify({"success": True, "message": "Automation stopped"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
     
 @app.route('/api/submitted-applications', methods=["GET"])
 def get_submitted_applications():
-    csv_path = os.path.join(os.path.dirname(__file__), "successful_applications.csv")
-
-    if not os.path.exists(csv_path):
+    if not os.path.exists(CSV_FILE_PATH):
         return jsonify({"error": "CSV file not found"}), 404
     
-    df = pd.read_csv(csv_path)
+    df = pd.read_csv(CSV_FILE_PATH)
 
     result = df.to_dict(orient="records")
 
