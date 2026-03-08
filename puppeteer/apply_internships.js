@@ -81,12 +81,19 @@ function shouldStop() {
   updateProgress(5, "Launching browser...", 0, 0);
   
   const browser = await puppeteer.launch({
-    headless: false,
+    headless: "new",
     executablePath:
       process.env.PUPPETEER_EXECUTABLE_PATH ||
       require("puppeteer").executablePath(),
     defaultViewport: null,
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu"],
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-gpu",
+      "--disable-dev-shm-usage",
+      "--disable-software-rasterizer",
+      "--disable-extensions"
+    ],
   });
 
   const page = await browser.newPage();
