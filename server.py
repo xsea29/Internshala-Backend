@@ -13,7 +13,11 @@ import uuid
 from threading import Thread
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True)
+CORS(app, origins=[
+    "https://internshala-automation-tool.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:5173"
+], supports_credentials=True)
 bcrypt = Bcrypt(app)
 
 # Create data directories
