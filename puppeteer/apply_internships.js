@@ -182,10 +182,10 @@ async function loadCookies(page) {
   await page.setCookie(...cookies);
   console.log("Cookies loaded successfully!");
   await page.goto("http://www.internshala.com", { 
-    waitUntil: "networkidle2", 
-    timeout: 60000 // 60 seconds timeout
+    waitUntil: "domcontentloaded", 
+    timeout: 30000
   });
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  await new Promise((resolve) => setTimeout(resolve, 500));
 }
 
 async function loginAndSaveCookies(page) {
@@ -193,37 +193,37 @@ async function loginAndSaveCookies(page) {
     console.log("Login credentials check - Email:", email ? "SET" : "MISSING", "Password:", password ? "SET" : "MISSING");
     
     await page.goto("http://www.internshala.com", { 
-      waitUntil: "networkidle2", 
-      timeout: 60000 // 60 seconds timeout
+      waitUntil: "domcontentloaded", 
+      timeout: 30000
     });
     console.log("Loaded Internshala homepage");
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 500));
     
-    await page.waitForSelector(".register-student-cta", { visible: true, timeout: 30000 });
+    await page.waitForSelector(".register-student-cta", { visible: true, timeout: 20000 });
     await page.click(".register-student-cta");
     console.log("Clicked register button");
     
-    await page.waitForSelector("#login-link-container", { visible: true, timeout: 30000 });
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await page.waitForSelector("#login-link-container", { visible: true, timeout: 15000 });
+    await new Promise((resolve) => setTimeout(resolve, 300));
     await page.click('[data-target="#login-modal"]');
     console.log("Opened login modal");
 
     // Wait for modal to appear
-    await page.waitForSelector("#modal_email", { visible: true, timeout: 30000 });
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    await page.waitForSelector("#modal_email", { visible: true, timeout: 15000 });
+    await new Promise((resolve) => setTimeout(resolve, 400));
     
     console.log("Typing credentials...");
-    await page.type("#modal_email", email, { delay: 100 });
-    await page.type("#modal_password", password, { delay: 100 });
+    await page.type("#modal_email", email, { delay: 50 });
+    await page.type("#modal_password", password, { delay: 50 });
     
     // Wait a bit before submitting
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 500));
     await page.keyboard.press("Enter");
     console.log("Submitted login form, waiting for navigation...");
     
-    // Longer timeout for slow connections, and handle possible login errors
+    // Use domcontentloaded for faster login
     try {
-      await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 90000 });
+      await page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 45000 });
       console.log("Login navigation successful");
     } catch (navError) {
       // Check if we're already logged in (navigation might not happen if already on correct page)
@@ -256,20 +256,22 @@ async function loginAndSaveCookies(page) {
 }
 
 async function navigateToInternships(page) {
-  await page.waitForSelector("#internships_new_superscript", { visible: true });
-  await new Promise((resolve) => setTimeout(resolve, 800));
+  console.log("Navigating to internships page...");
+  await page.waitForSelector("#internships_new_superscript", { visible: true, timeout: 15000 });
+  await new Promise((resolve) => setTimeout(resolve, 300));
   
   // Use Promise.all to handle click and navigation together
   await Promise.all([
-    page.waitForNavigation({ waitUntil: "networkidle2", timeout: 60000 }),
+    page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 30000 }),
     page.click("#internships_new_superscript")
   ]);
+  console.log("Successfully navigated to internships page");
   
-  await new Promise((resolve) => setTimeout(resolve, 2000));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 }
 
 async function setProfileFilter(page, profile) {
-  await page.waitForSelector('[name="matching_preference"]');
+  await page.waitForSelector('[name="matching_preference"]', { timeout: 10000 });
 
   // Check the current state of the checkbox
   const isChecked = await page.$eval(
@@ -281,23 +283,23 @@ async function setProfileFilter(page, profile) {
     await page.click("#matching_preference");
   }
 
-  await page.waitForSelector("#select_category_chosen > ul > li > input");
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  await page.waitForSelector("#select_category_chosen > ul > li > input", { timeout: 10000 });
+  await new Promise((resolve) => setTimeout(resolve, 500));
 
   const searchElement = await page.$(
     "#select_category_chosen > ul > li > input",
     { visible: true }
   );
   await searchElement.focus();
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  await new Promise((resolve) => setTimeout(resolve, 500));
 
   await page.type("#select_category_chosen > ul > li > input", profile, {
-    delay: 200,
+    delay: 100,
   });
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  await new Promise((resolve) => setTimeout(resolve, 500));
 
   await page.keyboard.press("Enter");
-  await new Promise((resolve) => setTimeout(resolve, 2000));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 }
 
 let allApplications = [];
@@ -357,24 +359,24 @@ async function fetchApplications(page, profile) {
       }
 
       // Click the button and wait for the next page
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      await new Promise((resolve) => setTimeout(resolve, 500));
       
       // Use Promise.all to handle click and navigation together
       try {
         await Promise.all([
-          page.waitForNavigation({ waitUntil: "networkidle2", timeout: 60000 }),
+          page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 30000 }),
           nextPageElement.click()
         ]);
       } catch (error) {
         console.log("Navigation error, retrying...");
-        await page.reload({ waitUntil: "networkidle2" });
+        await page.reload({ waitUntil: "domcontentloaded", timeout: 20000 });
       }
       
       await page.waitForSelector(".internship_list_container", {
         visible: true,
-        timeout: 30000
+        timeout: 15000
       });
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       pageNum++;
     } else {
@@ -387,43 +389,43 @@ async function fetchApplications(page, profile) {
 async function applyForInternship(page, url, title, company) {
   try {
     await page.goto(`https://internshala.com${url}`, { 
-      waitUntil: "networkidle2",
-      timeout: 60000 // 60 seconds timeout
+      waitUntil: "domcontentloaded",
+      timeout: 30000
     });
     console.log("Applying for:", url);
 
     // Wait for apply button to be visible and clickable
-    await page.waitForSelector(".buttons_container", { visible: true, timeout: 30000 });
-    await page.waitForSelector("button.btn.btn-large", { visible: true, timeout: 30000 });
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+    await page.waitForSelector(".buttons_container", { visible: true, timeout: 15000 });
+    await page.waitForSelector("button.btn.btn-large", { visible: true, timeout: 15000 });
+    await new Promise(resolve => setTimeout(resolve, 500));
     await page.click("button.btn.btn-large");
 
     // Wait for application form to load
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Wait 1.5 seconds
+    await new Promise(resolve => setTimeout(resolve, 800));
     
     const coverLetter = await page.$(".ql-editor.ql-blank");
     if (coverLetter) {
-      await page.waitForSelector(".ql-editor.ql-blank", { visible: true, timeout: 30000 });
+      await page.waitForSelector(".ql-editor.ql-blank", { visible: true, timeout: 15000 });
       await coverLetter.click(); // Focus on the element
-      await new Promise(resolve => setTimeout(resolve, 500));
-      await coverLetter.type(cover, { delay: 20 }); // Increased delay for safer typing
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await coverLetter.type(cover, { delay: 10 });
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
 
     // Wait before checking relocation checkbox
-    await new Promise(resolve => setTimeout(resolve, 800));
+    await new Promise(resolve => setTimeout(resolve, 400));
     const relocationCheckbox = await page.$(
       'input[name="location_single"][value="yes"]'
     );
     if (relocationCheckbox) {
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
       await page.click('input[name="location_single"][value="yes"]');
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
 
     // Wait before clicking submit button
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    await page.waitForSelector("div.submit_button_container > #submit", { visible: true, timeout: 30000 });
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await page.waitForSelector("div.submit_button_container > #submit", { visible: true, timeout: 15000 });
     await page.click("div.submit_button_container > #submit");
 
     const isDisabled = await page.$eval(
