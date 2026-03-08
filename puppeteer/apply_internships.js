@@ -1,7 +1,11 @@
 const puppeteer = require("puppeteer-extra");
+const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const fs = require("fs");
 const path = require("path");
 require("dotenv").config();
+
+// Use stealth plugin to avoid detection
+puppeteer.use(StealthPlugin());
 
 const email = process.env.EMAIL;
 const password = process.env.PASSWORD;
@@ -211,11 +215,35 @@ async function loginAndSaveCookies(page) {
     console.log("Typing credentials...");
     await page.type("#modal_email", email, { delay: 100 });
     await page.type("#modal_password", password, { delay: 100 });
-    await page.keyboard.press("Enter");
-    console.log("Submitted login form");
     
-    await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 60000 });
-    console.log("Login successful");
+    // Wait a bit before submitting
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await page.keyboard.press("Enter");
+    console.log("Submitted login form, waiting for navigation...");
+    
+    // Longer timeout for slow connections, and handle possible login errors
+    try {
+      await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 90000 });
+      console.log("Login navigation successful");
+    } catch (navError) {
+      // Check if we're already logged in (navigation might not happen if already on correct page)
+      const currentUrl = page.url();
+      console.log("Navigation timeout, current URL:", currentUrl);
+      
+      // Check for login error messages
+      const errorElement = await page.$(".alert.alert-danger");
+      if (errorElement) {
+        const errorText = await page.evaluate(el => el.textContent, errorElement);
+        throw new Error(`Login failed: ${errorText}`);
+      }
+      
+      // If no error and URL changed, consider it successful
+      if (!currentUrl.includes("login")) {
+        console.log("Appears to be logged in despite navigation timeout");
+      } else {
+        throw navError;
+      }
+    }
 
     const cookies = await page.cookies();
     fs.writeFileSync(cookiesFile, JSON.stringify(cookies));
