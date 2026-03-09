@@ -14,6 +14,7 @@ from threading import Thread
 
 app = Flask(__name__)
 CORS(app, origins=[
+    "https://internshala-automation-tool-8a3513dnc.vercel.app",
     "https://internshala-automation-tool.vercel.app",
     "http://localhost:3000",
     "http://localhost:5173"
